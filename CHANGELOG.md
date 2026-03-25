@@ -64,7 +64,35 @@
 -- Novas permissões adicionadas:
 manage_announcements -- Criar avisos (dono)
 access_admin_chat     -- Acessar chat (todos admins)
+manage_reports        -- Gerenciar reports
+manage_economy        -- Ajustar dinheiro de jogadores
+manage_weather        -- Controlar clima/hora
+manage_db             -- Limpeza/performance DB (dono)
 ```
+
+---
+
+## [v2.6] - 25 Mar 2026 - 🛠️ Ferramentas de Administrador (1 a 8)
+
+### 🧰 Ferramentas Avançadas
+- Aba de Ferramentas com 8 blocos:
+  1. Localizador/Teleporte de jogador
+  2. Ban/Unban + listagem de banimentos
+  3. Sistema de Reports (denúncias)
+  4. Dashboard de Saúde do servidor (players, CPU, uptime)
+  5. Controle dinâmico de permissões por cargo
+  6. Economia (visualizar e definir saldo)
+  7. Clima e horário em tempo real
+  8. Limpeza de banco (logs/chat/reports/bans expirados)
+
+### 🔐 Segurança e Logging
+- Logs incluídos para cada ação de ferramenta
+- Controle de permissão respeitando políticas de cargo
+- Rotina de cleanup segura somente para dono
+
+### ⚙️ Integrações Cliente-Servidor
+- Novo NUI callbacks: `getPlayerCoords`, `teleportPlayer`, `getBans`, `banPlayer`, `unbanPlayer`, `createReport`, `getReports`, `resolveReport`, `getServerStats`, `getRoles`, `setRolePermission`, `getPlayerMoney`, `setPlayerMoney`, `setWeather`, `setTime`, `cleanupDatabase`
+- Eventos cliente: `vrp_admin_panel:setWeather`, `vrp_admin_panel:setTime`
 
 ---
 

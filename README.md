@@ -218,6 +218,30 @@ VALUES (1, 'admin123', 'dono');
 ### **Cargo: ADMIN**
 ```
 ✅ Kick/Heal/Revive
+✅ Acessar chat admin
+✅ Ver e responder reports
+✅ Visualizar dashboard de servidor
+
+---
+
+## 🛠️ Novas Ferramentas (v2.6)
+
+Este update adiciona uma aba inteira para operações avançadas de administração:
+
+1. Localizar e teletransportar jogadores
+2. Ban/Unban e listagem de banimentos ativos
+3. Sistema de reports com resolver/recusar
+4. Painel de saúde do servidor (players, CPU, uptime)
+5. Permissões dinâmicas por cargo (setRolePermission)
+6. Gestão de economia (consultar/definir valor do jogador)
+7. Controle de clima/hora em tempo real
+8. Limpeza de banco de dados (logs antigos, reports, bans expirados)
+
+### 🔔 Chat de Admin e Avisos
+- Chat interno (`admin_chat`) para admins com permissão `access_admin_chat`
+- Avisos globais (`announcements`) exibidos para todos os jogadores
+- Gerenciamento de avisos via painel
+
 ✅ Definir grupos
 ✅ Ver logs básicos
 ❌ Administrativo
