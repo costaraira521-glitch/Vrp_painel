@@ -1,0 +1,227 @@
+:root {
+  --bg: #0f172a;
+  --panel: #111827;
+  --text: #e0e7ff;
+  --muted: #94a3b8;
+  --accent: #60a5fa;
+  --accent2: #a78bfa;
+  --shadow: rgba(15, 23, 42, 0.75);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin:0;
+  min-height:100%;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  background: radial-gradient(circle at top left, #2e3b64, #0f172a 50%);
+  color: var(--text);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  z-index: 1000;
+}
+
+.app {
+  position: fixed;
+  top: 3%;
+  left: 3%;
+  width: 380px;
+  height: auto;
+  max-height: 90vh;
+  background: var(--panel);
+  border-radius: 1rem;
+  box-shadow: 0 12px 60px var(--shadow);
+  padding: 1.2rem;
+  z-index: 1001;
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.app.minimized {
+  width: 220px;
+  max-height: 260px;
+  overflow: hidden;
+}
+
+.app.minimized .content-card {
+  display: none;
+}
+
+.app.minimized .login-card {
+  display: none;
+}
+
+.app.minimized .header h1 {
+  font-size: 0.9rem;
+}
+
+.app.minimized .tabs,
+.app.minimized .tab-content,
+.app.minimized .chart-container {
+  display: none !important;
+}
+.card {
+  width: 100%;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 0.85rem;
+  padding: 1rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.login-card {
+  max-width: 380px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.login-card input,
+.content-card input,
+.login-card button,
+.content-card button {
+  width: 100%;
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.login-card button,
+.content-card button {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+}
+
+h1, h2 {
+  margin: 0.25rem 0 0.6rem;
+}
+
+.msg.error { color: #fca5a5; }
+
+.content-card {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.status {
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.8rem 0;
+  overflow-x: auto;
+}
+
+.tab {
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.6rem;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+.tab.active {
+  background: #1d4ed8;
+  border-color: #2563eb;
+  color: #fff;
+}
+
+.tab-content {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 0.7rem;
+  padding: 0.8rem;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(180px,1fr));
+  gap: 0.75rem;
+}
+
+.chart-container {
+  margin-top: 1rem;
+  border: 1px solid #334155;
+  border-radius: 0.75rem;
+  background: #111827;
+  padding: 0.8rem;
+}
+
+.log-filter-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.log-filter-row input,
+.log-filter-row button {
+  border-radius: 0.5rem;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.45rem 0.75rem;
+}
+
+pre {
+  background: #111827;
+  border-radius: 0.6rem;
+  border: 1px solid #334155;
+  padding: 0.7rem;
+  min-height: 120px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cmd-grid { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+
+.wl-flow {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0,0,0,0.75);
+  display: grid;
+  place-items: center;
+}
+
+.wl-card {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  width: min(420px, 90%);
+}
+
+.wl-card h2 {
+  margin-top: 0;
+}
+
+.wl-card input,
+.wl-card button {
+  margin: 0.5rem 0;
+}
+
+@media (max-width: 1000px) {
+  .app { inset: 2% 3%; }
+  .login-card, .content-card { font-size: 0.9rem; }
+}

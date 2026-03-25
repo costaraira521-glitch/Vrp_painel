@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel ADM VRP</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="overlay" id="overlay" style="display:none"></div>
+  <div class="app" id="app" style="display:none">
+    <section class="card login-card" id="loginPanel">
+      <h1>Login Admin</h1>
+      <input id="login-username" type="text" placeholder="Usuário (id)" />
+      <input id="login-password" type="password" placeholder="Senha" />
+      <button id="login-btn">Entrar</button>
+      <p class="msg error" id="login-error"></p>
+    </section>
+
+    <section class="card content-card" id="dashboardPanel" style="display:none">
+      <div class="header">
+        <h1>Painel Admin VRP</h1>
+        <div>
+          <span id="status-admin">Offline</span>
+          <button id="toggle-panel-btn">Minimizar</button>
+          <button id="logout-btn">Sair</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="tab-home">Home</button>
+        <button class="tab" data-tab="tab-player">Buscar Player</button>
+        <button class="tab" data-tab="tab-commands">Comandos</button>
+        <button class="tab" data-tab="tab-logs">Logs ADM</button>
+        <button class="tab" data-tab="tab-owner">Logs Dono</button>
+        <button class="tab" data-tab="tab-whitelist">Whitelist</button>
+        <button class="tab" data-tab="tab-admins">Gestão Admin</button>
+      </div>
+
+      <div class="tab-content" id="tab-home">
+        <h2>Visão Geral</h2>
+        <p>Utilize os recursos para gerenciar jogadores e supervisionar o servidor.</p>
+        <div class="info-grid">
+          <div><strong>Admins ativos:</strong> <span id="admin-count">0</span></div>
+          <div><strong>Usuário logado:</strong> <span id="admin-name">-</span></div>
+        </div>
+        <div class="chart-container">
+          <canvas id="activityChart" width="400" height="180"></canvas>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-player" style="display:none">
+        <h2>Buscar Spieler por ID</h2>
+        <input id="player-id" type="number" placeholder="ID do jogador" />
+        <button id="player-search-btn">Buscar</button>
+        <pre id="player-info">Preencha o ID e clique em buscar.</pre>
+      </div>
+
+      <div class="tab-content" id="tab-commands" style="display:none">
+        <h2>Comandos Rápidos</h2>
+        <label>ID do jogador: <input id="cmd-player-id" type="number" min="1" placeholder="ID" /></label>
+        <div class="cmd-grid">
+          <button id="cmd-kick">Kick</button>
+          <button id="cmd-heal">Heal</button>
+          <button id="cmd-toggle-tag">Mostrar nametags</button>
+        </div>
+        <p id="cmd-message"></p>
+      </div>
+
+      <div class="tab-content" id="tab-logs" style="display:none">
+        <h2>Logs de Ações (Admin)</h2>
+        <div class="log-filter-row">
+          <input id="log-filter-input" type="text" placeholder="Filtrar, ex: KICK, WL APROVADO" />
+          <button id="log-filter-btn">Aplicar filtro</button>
+          <button id="log-reset-btn">Limpar filtro</button>
+        </div>
+        <button id="log-refresh-btn">Atualizar logs</button>
+        <pre id="logs-content">Nenhum log carregado.</pre>
+      </div>
+
+      <div class="tab-content" id="tab-owner" style="display:none">
+        <h2>Logs Dono (apenas dono)</h2>
+        <button id="owner-log-refresh-btn">Atualizar logs dono</button>
+        <pre id="owner-logs-content">Aguardando...</pre>
+      </div>
+
+      <div class="tab-content" id="tab-whitelist" style="display:none">
+        <h2>Whitelist</h2>
+        <button id="wl-refresh-btn">Carregar WL</button>
+        <pre id="wl-content">Nenhum registro ainda</pre>
+      </div>
+
+      <div class="tab-content" id="tab-admins" style="display:none">
+        <h2>Gestão de Admin</h2>
+        <button id="admin-refresh-btn">Carregar admins</button>
+        <pre id="admin-list">Nenhum admin carregado.</pre>
+        <h3>Adicionar/Atualizar Admin</h3>
+        <label>ID do admin <input id="admin-id" type="number" /></label>
+        <label>Senha <input id="admin-password" type="password" /></label>
+        <label>Cargo <select id="admin-role"><option value="admin">admin</option><option value="superadmin">superadmin</option><option value="dono">dono</option></select></label>
+        <button id="admin-save-btn">Salvar admin</button>
+        <p id="admin-message"></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="wl-flow" id="wlPanel" style="display:none">
+    <div class="wl-card">
+      <h2>Whitelist - Responda para continuar</h2>
+      <p id="wl-question">Pergunta aqui</p>
+      <input id="wl-answer" type="text" placeholder="Digite a resposta" />
+      <button id="wl-submit">Enviar resposta</button>
+      <p class="msg error" id="wl-error"></p>
+      <button id="wl-cancel">Fechar (sem acesso)</button>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
