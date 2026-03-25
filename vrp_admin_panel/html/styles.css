@@ -459,6 +459,48 @@ pre {
   font-weight: 600;
 }
 
+.tools-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  margin-top: 1rem;
+}
+
+.tools-grid section {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 0.75rem;
+  border-radius: 0.6rem;
+}
+
+.tools-grid h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.tools-grid input,
+.tools-grid select,
+.tools-grid button {
+  width: 100%;
+  margin: 0.2rem 0;
+}
+
+.tools-grid pre {
+  max-height: 180px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(100, 116, 139, 0.5);
+  padding: 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 1024px) {
+  .tools-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════ */
 /* STYLES PARA CHAT DOS ADMINS */
 /* ═══════════════════════════════════════════════════════════════════ */

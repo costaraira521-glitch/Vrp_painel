@@ -395,7 +395,169 @@ window.setTab = function(tabName) {
   if (tabName === 'tab-announcements') {
     loadAnnouncements();
   }
+  if (tabName === 'tab-tools') {
+    toolRefreshServerStats();
+  }
 };
+
+// ═══════════════════════════════════════════════════════════════════
+// SISTEMA DE FERRAMENTAS 1-8
+// ═══════════════════════════════════════════════════════════════════
+
+function appendToolText(elemId, value) {
+  const elem = document.getElementById(elemId);
+  if (!elem) return;
+  elem.textContent = JSON.stringify(value, null, 2);
+}
+
+async function toolFetch(action, payload = {}) {
+  const res = await fetchNui(action, payload);
+  if (!res.success) {
+    return { error: res.error || 'Erro na API' };
+  }
+  return res;
+}
+
+document.getElementById('tool-locate-player').addEventListener('click', async () => {
+  const id = parseInt(document.getElementById('tool-player-id').value, 10);
+  if (!id) {
+    document.getElementById('tool-player-coords').textContent = 'ID inválido';
+    return;
+  }
+  const res = await toolFetch('getPlayerCoords', { targetId: id });
+  if (res.error) {
+    document.getElementById('tool-player-coords').textContent = res.error;
+    return;
+  }
+  document.getElementById('tool-player-coords').textContent = `Coords: ${res.coords.x.toFixed(2)}, ${res.coords.y.toFixed(2)}, ${res.coords.z.toFixed(2)}`;
+});
+
+document.getElementById('tool-teleport-player').addEventListener('click', async () => {
+  const targetId = parseInt(document.getElementById('tool-player-id').value, 10);
+  const x = parseFloat(document.getElementById('tool-tp-x').value);
+  const y = parseFloat(document.getElementById('tool-tp-y').value);
+  const z = parseFloat(document.getElementById('tool-tp-z').value);
+  if (!targetId || isNaN(x) || isNaN(y) || isNaN(z)) {
+    document.getElementById('tool-player-coords').textContent = 'Preencha ID e coordenadas válidas';
+    return;
+  }
+  const res = await toolFetch('teleportPlayer', { targetId, x, y, z });
+  document.getElementById('tool-player-coords').textContent = res.success ? 'Teleport realizado com sucesso.' : (res.error || 'Erro');
+});
+
+// 2) Ban / Unban / Lista de bans
+document.getElementById('tool-ban').addEventListener('click', async () => {
+  const targetId = parseInt(document.getElementById('tool-ban-player-id').value, 10);
+  const reason = document.getElementById('tool-ban-reason').value.trim();
+  const duration = parseInt(document.getElementById('tool-ban-duration').value, 10) || 0;
+  if (!targetId || !reason) {
+    document.getElementById('tool-bans-list').textContent = 'ID e motivo são obrigatórios';
+    return;
+  }
+  const res = await toolFetch('banPlayer', { targetId, reason, duration });
+  document.getElementById('tool-bans-list').textContent = res.success ? 'Ban aplicado.' : (res.error || 'Erro');
+});
+
+document.getElementById('tool-unban').addEventListener('click', async () => {
+  const targetId = parseInt(document.getElementById('tool-ban-player-id').value, 10);
+  if (!targetId) {
+    document.getElementById('tool-bans-list').textContent = 'ID inválido';
+    return;
+  }
+  const res = await toolFetch('unbanPlayer', { targetId });
+  document.getElementById('tool-bans-list').textContent = res.success ? 'Desban aplicado.' : (res.error || 'Erro');
+});
+
+document.getElementById('tool-refresh-bans').addEventListener('click', async () => {
+  const res = await toolFetch('getBans');
+  appendToolText('tool-bans-list', res.bans || res.error);
+});
+
+// 3) Reports
+document.getElementById('tool-create-report').addEventListener('click', async () => {
+  const reportedId = parseInt(document.getElementById('tool-report-player-id').value, 10);
+  const reason = document.getElementById('tool-report-reason').value.trim();
+  if (!reportedId || !reason) {
+    document.getElementById('tool-reports-list').textContent = 'ID e motivo são obrigatórios';
+    return;
+  }
+  const res = await toolFetch('createReport', { reportedId, reason });
+  document.getElementById('tool-reports-list').textContent = res.success ? 'Report enviado.' : (res.error || 'Erro');
+});
+
+document.getElementById('tool-get-reports').addEventListener('click', async () => {
+  const res = await toolFetch('getReports');
+  appendToolText('tool-reports-list', res.reports || res.error);
+});
+
+// 4) Server stats
+async function toolRefreshServerStats() {
+  const res = await toolFetch('getServerStats');
+  appendToolText('tool-server-stats', res.stats || res.error);
+}
+
+document.getElementById('tool-refresh-stats').addEventListener('click', toolRefreshServerStats);
+
+// 5) Role permissions
+document.getElementById('tool-get-roles').addEventListener('click', async () => {
+  const res = await toolFetch('getRoles');
+  appendToolText('tool-roles-list', res.roles || res.error);
+});
+
+document.getElementById('tool-set-role-permission').addEventListener('click', async () => {
+  const role = document.getElementById('tool-role-select').value;
+  const permission = document.getElementById('tool-permission-name').value.trim();
+  const value = document.getElementById('tool-permission-value').value === 'true';
+  if (!role || !permission) {
+    document.getElementById('tool-roles-list').textContent = 'Role e permissão são obrigatórios';
+    return;
+  }
+  const res = await toolFetch('setRolePermission', { role, permission, value });
+  document.getElementById('tool-roles-list').textContent = res.success ? 'Permissão atualizada.' : (res.error || 'Erro');
+});
+
+// 6) Economia
+document.getElementById('tool-get-money').addEventListener('click', async () => {
+  const targetId = parseInt(document.getElementById('tool-money-player-id').value, 10);
+  if (!targetId) {
+    document.getElementById('tool-money-info').textContent = 'ID inválido';
+    return;
+  }
+  const res = await toolFetch('getPlayerMoney', { targetId });
+  document.getElementById('tool-money-info').textContent = res.money !== undefined ? `Saldo: ${res.money}` : (res.error || 'Erro');
+});
+
+document.getElementById('tool-set-money').addEventListener('click', async () => {
+  const targetId = parseInt(document.getElementById('tool-money-player-id').value, 10);
+  const amount = parseFloat(document.getElementById('tool-money-amount').value);
+  if (!targetId || isNaN(amount)) {
+    document.getElementById('tool-money-info').textContent = 'ID ou valor inválidos';
+    return;
+  }
+  const res = await toolFetch('setPlayerMoney', { targetId, amount });
+  document.getElementById('tool-money-info').textContent = res.success ? 'Saldo atualizado.' : (res.error || 'Erro');
+});
+
+// 7) Clima e hora
+document.getElementById('tool-set-weather').addEventListener('click', async () => {
+  const weather = document.getElementById('tool-weather').value.trim();
+  if (!weather) { document.getElementById('tool-server-stats').textContent = 'Tempo inválido'; return; }
+  const res = await toolFetch('setWeather', { weather });
+  document.getElementById('tool-server-stats').textContent = res.success ? 'Clima atualizado.' : (res.error || 'Erro');
+});
+
+document.getElementById('tool-set-time').addEventListener('click', async () => {
+  const hour = parseInt(document.getElementById('tool-hour').value, 10);
+  const minute = parseInt(document.getElementById('tool-minute').value, 10);
+  const res = await toolFetch('setTime', { hour, minute });
+  document.getElementById('tool-server-stats').textContent = res.success ? 'Hora atualizada.' : (res.error || 'Erro');
+});
+
+// 8) DB cleanup
+document.getElementById('tool-cleanup-db').addEventListener('click', async () => {
+  const res = await toolFetch('cleanupDatabase');
+  document.getElementById('tool-cleanup-result').textContent = res.success ? (res.message || 'Limpeza concluída') : (res.error || 'Erro');
+});
 
 // ═══════════════════════════════════════════════════════════════════
 // SISTEMA DE AVISOS

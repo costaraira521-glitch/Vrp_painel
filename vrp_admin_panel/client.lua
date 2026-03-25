@@ -102,6 +102,22 @@ AddEventHandler('vrp_admin_panel:setDrawTag', function(state)
   drawPlayerTags = state
 end)
 
+RegisterNetEvent('vrp_admin_panel:setWeather')
+AddEventHandler('vrp_admin_panel:setWeather', function(weather)
+  if type(weather) ~= 'string' then return end
+  SetWeatherTypeNowPersist(weather)
+  SetNextWeatherType(weather)
+  SetWeatherTypePersist(weather)
+  ClearOverrideWeather()
+  ClearWeatherTypePersist()
+end)
+
+RegisterNetEvent('vrp_admin_panel:setTime')
+AddEventHandler('vrp_admin_panel:setTime', function(hour, minute)
+  if tonumber(hour) == nil or tonumber(minute) == nil then return end
+  NetworkOverrideClockTime(hour, minute, 0)
+end)
+
 AddEventHandler('playerSpawned', function(spawn)
   TriggerServerEvent('vrp_admin_panel:checkWhitelist')
 end)

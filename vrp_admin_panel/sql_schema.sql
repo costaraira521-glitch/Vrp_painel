@@ -71,7 +71,23 @@ CREATE TABLE IF NOT EXISTS `vrp_admin_panel_bans` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ═══════════════════════════════════════════════════════════════════
--- 5. TABELA DE HISTÓRICO DE GRUPOS (Auditoria de Mudanças de Grupo)
+-- 5. TABELA DE REPORTS (Sistema de denúncias)
+-- ═══════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS `vrp_admin_panel_reports` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `reported_id` INT NOT NULL,
+  `reporter_id` INT NOT NULL,
+  `motivo` TEXT NOT NULL,
+  `status` VARCHAR(50) NOT NULL DEFAULT 'aberto',
+  `criado_em` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `atualizado_em` TIMESTAMP NULL,
+  INDEX `idx_reported_id` (`reported_id`),
+  INDEX `idx_reporter_id` (`reporter_id`),
+  INDEX `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ═══════════════════════════════════════════════════════════════════
+-- 6. TABELA DE HISTÓRICO DE GRUPOS (Auditoria de Mudanças de Grupo)
 -- ═══════════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS `vrp_admin_panel_group_history` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,

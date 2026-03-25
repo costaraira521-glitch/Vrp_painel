@@ -37,6 +37,7 @@
         <button class="tab" data-tab="tab-admins">Gestão Admin</button>
         <button class="tab" data-tab="tab-groups">Grupos</button>
         <button class="tab" data-tab="tab-announcements">🔔 Avisos</button>
+        <button class="tab" data-tab="tab-tools">🛠️ Ferramentas</button>
       </div>
 
       <div class="tab-content" id="tab-home">
@@ -153,6 +154,95 @@
             <button id="announcement-send-btn">Enviar Aviso</button>
             <p id="announcement-message-response"></p>
           </div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-tools" style="display:none">
+        <h2>🛠️ Ferramentas Avançadas</h2>
+        <div class="tools-grid">
+          <section>
+            <h3>1) Localizador / Teleporte</h3>
+            <label>ID do Jogador:</label>
+            <input id="tool-player-id" type="number" min="1" placeholder="ID do jogador" />
+            <button id="tool-locate-player">Buscar Coords</button>
+            <button id="tool-teleport-player">Teleportar Jogador</button>
+            <p id="tool-player-coords"></p>
+            <input id="tool-tp-x" type="number" placeholder="X" />
+            <input id="tool-tp-y" type="number" placeholder="Y" />
+            <input id="tool-tp-z" type="number" placeholder="Z" />
+          </section>
+
+          <section>
+            <h3>2) Ban / Unban</h3>
+            <label>ID do Jogador:</label>
+            <input id="tool-ban-player-id" type="number" min="1" placeholder="ID" />
+            <input id="tool-ban-reason" type="text" placeholder="Motivo" />
+            <input id="tool-ban-duration" type="number" min="0" placeholder="Duração em segundos (0 permanente)" />
+            <button id="tool-ban">Banir</button>
+            <button id="tool-unban">Desbanir</button>
+            <button id="tool-refresh-bans">Listar Bans</button>
+            <pre id="tool-bans-list"></pre>
+          </section>
+
+          <section>
+            <h3>3) Reports</h3>
+            <label>ID do reportado:</label>
+            <input id="tool-report-player-id" type="number" min="1" placeholder="ID" />
+            <input id="tool-report-reason" type="text" placeholder="Motivo" />
+            <button id="tool-create-report">Criar Report</button>
+            <button id="tool-get-reports">Buscar Reports</button>
+            <pre id="tool-reports-list"></pre>
+          </section>
+
+          <section>
+            <h3>4) Saúde do Servidor</h3>
+            <button id="tool-refresh-stats">Atualizar Status</button>
+            <pre id="tool-server-stats"></pre>
+          </section>
+
+          <section>
+            <h3>5) Permissões dinâmicas</h3>
+            <label>Cargo:</label>
+            <select id="tool-role-select">
+              <option value="admin">admin</option>
+              <option value="superadmin">superadmin</option>
+              <option value="dono">dono</option>
+            </select>
+            <label>Permissão:</label>
+            <input id="tool-permission-name" type="text" placeholder="Ex: manage_reports" />
+            <select id="tool-permission-value"><option value="true">true</option><option value="false">false</option></select>
+            <button id="tool-set-role-permission">Salvar Permissão</button>
+            <button id="tool-get-roles">Ver Cargos</button>
+            <pre id="tool-roles-list"></pre>
+          </section>
+
+          <section>
+            <h3>6) Economia</h3>
+            <label>ID do Jogador:</label>
+            <input id="tool-money-player-id" type="number" min="1" placeholder="ID" />
+            <label>Valor:</label>
+            <input id="tool-money-amount" type="number" placeholder="Novo valor" />
+            <button id="tool-get-money">Ver Saldo</button>
+            <button id="tool-set-money">Definir Saldo</button>
+            <pre id="tool-money-info"></pre>
+          </section>
+
+          <section>
+            <h3>7) Clima e Hora</h3>
+            <label>Tempo:</label>
+            <input id="tool-weather" type="text" placeholder="ex: EXTRASUNNY" />
+            <button id="tool-set-weather">Setar Clima</button>
+            <label>Hora:</label>
+            <input id="tool-hour" type="number" min="0" max="23" placeholder="HH" />
+            <input id="tool-minute" type="number" min="0" max="59" placeholder="MM" />
+            <button id="tool-set-time">Setar Hora</button>
+          </section>
+
+          <section>
+            <h3>8) Limpeza de Dados</h3>
+            <button id="tool-cleanup-db">Rodar limpeza (90/30 dias)</button>
+            <p id="tool-cleanup-result"></p>
+          </section>
         </div>
       </div>
     </section>

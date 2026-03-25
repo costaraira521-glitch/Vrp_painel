@@ -96,6 +96,63 @@ local function ensureSqlTables()
       message TEXT NOT NULL
     );
   ]])
+
+  sqlExec([[
+    CREATE TABLE IF NOT EXISTS vrp_admin_panel_bans (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id INT NOT NULL,
+      banido_por INT NOT NULL,
+      motivo VARCHAR(255) NOT NULL,
+      banido_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      expira_em TIMESTAMP NULL,
+      ativo TINYINT(1) NOT NULL DEFAULT 1,
+      INDEX (user_id),
+      INDEX (banido_por),
+      INDEX (ativo)
+    );
+  ]])
+
+  sqlExec([[
+    CREATE TABLE IF NOT EXISTS vrp_admin_panel_reports (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      reported_id INT NOT NULL,
+      reporter_id INT NOT NULL,
+      motivo TEXT NOT NULL,
+      status VARCHAR(50) NOT NULL DEFAULT 'aberto',
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      atualizado_em TIMESTAMP NULL,
+      INDEX (reported_id),
+      INDEX (reporter_id),
+      INDEX (status)
+    );
+  ]])
+
+  sqlExec([[
+    CREATE TABLE IF NOT EXISTS vrp_admin_panel_admin_chat (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      admin_id INT NOT NULL,
+      mensagem TEXT NOT NULL,
+      tipo VARCHAR(50) NOT NULL DEFAULT 'normal',
+      enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX (admin_id),
+      INDEX (enviado_em)
+    );
+  ]])
+
+  sqlExec([[
+    CREATE TABLE IF NOT EXISTS vrp_admin_panel_system_announcements (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      titulo VARCHAR(255) NOT NULL,
+      mensagem TEXT NOT NULL,
+      tipo VARCHAR(50) NOT NULL DEFAULT 'info',
+      criado_por INT NOT NULL,
+      criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      ativo TINYINT(1) NOT NULL DEFAULT 1,
+      INDEX (tipo),
+      INDEX (ativo),
+      INDEX (criado_por)
+    );
+  ]])
 end
 
 local function getSqlAdmins()
@@ -779,7 +836,7 @@ RegisterNUICallback('setPlayerGroup', function(data, cb)
 end)
 
 RegisterNUICallback('getOwnerLogs', function(data, cb)
-  local source = source
+  local src = source
   local user_id = getUserId(src)
   if not user_id or not isDonor(user_id) then
     cb({ success = false, error = 'Somente dono.' })
@@ -792,6 +849,311 @@ RegisterNUICallback('getOwnerLogs', function(data, cb)
   if f then content = f:read('*a') or 'Nenhum log encontrado.'; f:close() end
 
   cb({ success = true, logs = content })
+end)
+
+-- Funções de ferramentas extras (Ideias 1 a 8)
+
+local function isPlayerOnline(user_id)
+  return getUserSource(user_id) ~= nil
+end
+
+-- 1) Localizador / Teleporte rápido
+RegisterNUICallback('getPlayerCoords', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'teleport') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local targetId = tonumber(data.targetId)
+  if not targetId then cb({ success = false, error = 'ID inválido.' }); return end
+
+  local targetSource = getUserSource(targetId)
+  if not targetSource then cb({ success = false, error = 'Jogador não está online.' }); return end
+
+  if vRPclient.getPosition then
+    vRPclient.getPosition(targetSource, {}, function(x, y, z)
+      cb({ success = true, coords = { x = x, y = y, z = z } })
+    end)
+  else
+    cb({ success = false, error = 'Função de coordenada não suportada.' })
+  end
+end)
+
+RegisterNUICallback('teleportPlayer', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'teleport') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local targetId = tonumber(data.targetId)
+  local x, y, z = tonumber(data.x), tonumber(data.y), tonumber(data.z)
+  if not targetId or not x or not y or not z then cb({ success = false, error = 'Dados inválidos.' }); return end
+
+  local targetSource = getUserSource(targetId)
+  if not targetSource then cb({ success = false, error = 'Jogador não está online.' }); return end
+
+  if vRPclient.teleport then
+    vRPclient.teleport(targetSource, {x, y, z})
+  elseif vRP.teleport then
+    vRP.teleport({targetId, x, y, z})
+  end
+
+  local logMsg = os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [TELEPORT] admin=%d target=%d to=%.2f,%.2f,%.2f', user_id, targetId, x, y, z)
+  writeLog(config.logs_path, logMsg)
+  sendWebhook(logMsg)
+  cb({ success = true })
+end)
+
+-- 2) Ban / Unban
+RegisterNUICallback('getBans', function(data, cb)
+  if not data then data = {} end
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'ban') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  sqlQuery('SELECT * FROM vrp_admin_panel_bans ORDER BY banido_em DESC LIMIT 50', {}, function(result)
+    cb({ success = true, bans = result or {} })
+  end)
+end)
+
+local function applyBan(targetId, adminId, reason, duration)
+  local expiry = nil
+  if duration and tonumber(duration) and tonumber(duration) > 0 then
+    expiry = os.date('%Y-%m-%d %H:%M:%S', os.time() + tonumber(duration))
+  end
+
+  sqlExec('INSERT INTO vrp_admin_panel_bans (user_id, banido_por, motivo, banido_em, expira_em, ativo) VALUES (?, ?, ?, NOW(), ?, 1)',
+    {targetId, adminId, reason, expiry})
+
+  if vRP.kick then
+    local trg = getUserSource(targetId)
+    if trg then vRP.kick(trg, reason or 'Banned by admin panel') end
+  end
+end
+
+RegisterNUICallback('banPlayer', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'ban') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+  local targetId = tonumber(data.targetId)
+  local reason = tostring(data.reason or 'Banido por sistema de admin').sub(data.reason or '', 1, 255)
+  local duration = tonumber(data.duration)
+  if not targetId then cb({ success = false, error = 'ID inválido.' }); return end
+
+  applyBan(targetId, user_id, reason, duration)
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [BAN] admin=%d target=%d reason=%s duration=%s', user_id, targetId, reason, tostring(duration)))
+  sendWebhook('[BAN] admin=' .. user_id .. ' target=' .. targetId)
+  cb({ success = true })
+end)
+
+RegisterNUICallback('unbanPlayer', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'ban') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+  local targetId = tonumber(data.targetId)
+  if not targetId then cb({ success = false, error = 'ID inválido.' }); return end
+
+  sqlExec('UPDATE vrp_admin_panel_bans SET ativo = 0 WHERE user_id = ? AND ativo = 1', {targetId})
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [UNBAN] admin=%d target=%d', user_id, targetId))
+  sendWebhook('[UNBAN] admin=' .. user_id .. ' target=' .. targetId)
+  cb({ success = true })
+end)
+
+-- 3) Reports
+RegisterNUICallback('createReport', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_reports') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local reportedId = tonumber(data.reportedId)
+  local motivo = tostring(data.reason or '')
+  if not reportedId or motivo == '' then cb({ success = false, error = 'Dados inválidos.' }); return end
+
+  sqlExec('INSERT INTO vrp_admin_panel_reports (reported_id, reporter_id, motivo, status, criado_em) VALUES (?, ?, ?, "aberto", NOW())',
+    {reportedId, user_id, motivo})
+
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [REPORT] reporter=%d target=%d reason=%s', user_id, reportedId, motivo))
+  cb({ success = true })
+end)
+
+RegisterNUICallback('getReports', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_reports') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  sqlQuery('SELECT * FROM vrp_admin_panel_reports ORDER BY criado_em DESC LIMIT 100', {}, function(result)
+    cb({ success = true, reports = result or {} })
+  end)
+end)
+
+RegisterNUICallback('resolveReport', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_reports') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local reportId = tonumber(data.reportId)
+  if not reportId then cb({ success = false, error = 'ID inválido.' }); return end
+
+  sqlExec('UPDATE vrp_admin_panel_reports SET status = ?, atualizado_em = NOW() WHERE id = ?', {tostring(data.status or 'resolvido'), reportId})
+  cb({ success = true })
+end)
+
+-- 4) Dashboard de Saúde do servidor
+RegisterNUICallback('getServerStats', function(data, cb)
+  local stats = {
+    players = #GetPlayers(),
+    uptime = os.time() - (GetConvarInt('server_start_time', os.time()) or os.time()),
+    memory = collectgarbage('count'),
+    fps = GetConvarInt('onesync_framerate', 0),
+    cpu = GetConvarInt('server_cpu', 0)
+  }
+  cb({ success = true, stats = stats })
+end)
+
+-- 5) Controle dinâmico de permissões (Admin roles)
+RegisterNUICallback('setRolePermission', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not isDonor(user_id) then
+    cb({ success = false, error = 'Apenas dono.' })
+    return
+  end
+
+  local role = tostring(data.role or '')
+  local perm = tostring(data.permission or '')
+  local value = data.value == true
+  if config.roles[role] == nil then cb({ success = false, error = 'Cargo inválido.' }); return end
+
+  config.roles[role][perm] = value
+  saveAdmins()
+  cb({ success = true })
+end)
+
+RegisterNUICallback('getRoles', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_admins') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+  cb({ success = true, roles = config.roles })
+end)
+
+-- 6) Economia
+RegisterNUICallback('getPlayerMoney', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_economy') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local targetId = tonumber(data.targetId)
+  if not targetId then cb({ success = false, error = 'ID inválido.' }); return end
+
+  if vRP.getBankMoney then
+    local money = vRP.getBankMoney({targetId})
+    cb({ success = true, money = money or 0 })
+  else
+    cb({ success = false, error = 'Função de economia não disponível.' })
+  end
+end)
+
+RegisterNUICallback('setPlayerMoney', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_economy') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local targetId = tonumber(data.targetId)
+  local amount = tonumber(data.amount)
+  if not targetId or amount == nil then cb({ success = false, error = 'Dados inválidos.' }); return end
+
+  if vRP.setBankMoney then
+    vRP.setBankMoney({targetId, amount})
+    writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [ECONOMIA] admin=%d target=%d amount=%d', user_id, targetId, amount))
+    cb({ success = true })
+  else
+    cb({ success = false, error = 'Função de economia não disponível.' })
+  end
+end)
+
+-- 7) Clima e hora
+RegisterNUICallback('setWeather', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_weather') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local weather = tostring(data.weather or '')
+  if weather == '' then cb({ success = false, error = 'Tempo inválido.' }); return end
+
+  TriggerClientEvent('vrp_admin_panel:setWeather', -1, weather)
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [WEATHER] admin=%d weather=%s', user_id, weather))
+  cb({ success = true })
+end)
+
+RegisterNUICallback('setTime', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_weather') then
+    cb({ success = false, error = 'Permissão negada.' })
+    return
+  end
+
+  local hour = tonumber(data.hour)
+  local minute = tonumber(data.minute)
+  if not hour or not minute or hour < 0 or hour > 23 or minute < 0 or minute > 59 then
+    cb({ success = false, error = 'Hora inválida.' }); return
+  end
+
+  TriggerClientEvent('vrp_admin_panel:setTime', -1, hour, minute)
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [TIME] admin=%d hora=%02d:%02d', user_id, hour, minute))
+  cb({ success = true })
+end)
+
+-- 8) Limpeza / manutenção do banco
+RegisterNUICallback('cleanupDatabase', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not isDonor(user_id) then
+    cb({ success = false, error = 'Apenas dono.' })
+    return
+  end
+
+  sqlExec('DELETE FROM vrp_admin_panel_logs WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY)')
+  sqlExec('DELETE FROM vrp_admin_panel_admin_chat WHERE enviado_em < DATE_SUB(NOW(), INTERVAL 30 DAY)')
+  sqlExec('DELETE FROM vrp_admin_panel_reports WHERE criado_em < DATE_SUB(NOW(), INTERVAL 90 DAY)')
+  sqlExec('DELETE FROM vrp_admin_panel_bans WHERE expira_em IS NOT NULL AND expira_em < NOW()')
+
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [CLEANUP] dono=%d', user_id))
+  cb({ success = true, message = 'Limpeza realizada com sucesso.' })
 end)
 
 -- ═══════════════════════════════════════════════════════════════════

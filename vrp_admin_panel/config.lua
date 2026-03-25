@@ -25,6 +25,7 @@ local config = {
       freeze = true, god_mode = true, money = true, manage_groups = true,
       -- Gerenciamento de Admin
       manage_admins = true, manage_wl = true, manage_announcements = true,
+      manage_reports = true, manage_economy = true, manage_weather = true, manage_db = true,
       -- Visualização
       view_logs = true, view_owner_logs = true, view_players = true,
       -- Chat
@@ -33,14 +34,19 @@ local config = {
     superadmin = {
       kick = true, heal = true, revive = true, ban = true, teleport = true,
       freeze = true, god_mode = true, money = true, manage_groups = true,
-      manage_wl = true,
+      manage_wl = true, manage_reports = true, manage_economy = true,
+      manage_weather = true, manage_db = false,
       view_logs = true, view_players = true,
       access_admin_chat = true
     },
     admin = {
       kick = true, heal = true, revive = true, manage_groups = true,
       view_logs = true, view_players = true,
-      access_admin_chat = true
+      access_admin_chat = true,
+      manage_reports = true,
+      manage_economy = false,
+      manage_weather = false,
+      manage_db = false
     }
   },
 
