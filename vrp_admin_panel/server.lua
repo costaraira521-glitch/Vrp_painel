@@ -664,9 +664,123 @@ AddEventHandler('vrp_admin_panel:cmdRevive', function(targetId)
   TriggerClientEvent('vrp_admin_panel:commandResult', src, true, 'Jogador revivido com sucesso.')
 end)
 
+-- ═══════════════════════════════════════════════════════════════════
+-- SISTEMA DE GRUPOS
+-- ═══════════════════════════════════════════════════════════════════
+
+RegisterNUICallback('getAvailableGroups', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_groups') then
+    cb({ success = false, error = 'Sem permissão.' })
+    return
+  end
+  
+  cb({ success = true, groups = config.groups or {} })
+end)
+
+RegisterNUICallback('getPlayerGroup', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_groups') then
+    cb({ success = false, error = 'Sem permissão.' })
+    return
+  end
+  
+  local targetId = tonumber(data.targetId)
+  if not targetId then
+    cb({ success = false, error = 'ID inválido.' })
+    return
+  end
+  
+  local targetSource = getUserSource(targetId)
+  if not targetSource then
+    cb({ success = false, error = 'Jogador não encontrado.' })
+    return
+  end
+  
+  -- Pega o grupo do jogador usando vRP
+  local playerGroup = 'user'
+  if vRP.getUserGroup then
+    local ok, result = pcall(vRP.getUserGroup, targetId)
+    if ok and result then
+      playerGroup = result
+    else
+      ok, result = pcall(vRP.getUserGroup, {targetId})
+      if ok and result then
+        playerGroup = result
+      end
+    end
+  end
+  
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [INFO GRUPO] admin=%d consultou grupo de=%d', user_id, targetId))
+  
+  cb({ success = true, group = playerGroup })
+end)
+
+RegisterNUICallback('setPlayerGroup', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  if not user_id or not hasPermission(user_id, 'manage_groups') then
+    cb({ success = false, error = 'Sem permissão.' })
+    return
+  end
+  
+  local targetId = tonumber(data.targetId)
+  local newGroup = tostring(data.group or '')
+  
+  if not targetId or targetId <= 0 then
+    cb({ success = false, error = 'ID inválido.' })
+    return
+  end
+  
+  if newGroup == '' then
+    cb({ success = false, error = 'Grupo inválido.' })
+    return
+  end
+  
+  -- Valida se o grupo existe na config
+  local groupExists = false
+  for _, g in ipairs(config.groups or {}) do
+    if g == newGroup then
+      groupExists = true
+      break
+    end
+  end
+  
+  if not groupExists then
+    cb({ success = false, error = 'Grupo não encontrado na configuração.' })
+    return
+  end
+  
+  local targetSource = getUserSource(targetId)
+  if not targetSource then
+    cb({ success = false, error = 'Jogador não encontrado.' })
+    return
+  end
+  
+  -- Define o novo grupo através de vRP
+  if vRP.addUserGroup then
+    pcall(vRP.addUserGroup, targetId, newGroup)
+  else
+    pcall(vRP.addUserGroup, {targetId, newGroup})
+  end
+  
+  local logMsg = os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [GRUPO SET] admin=%d alterou jogador=%d novo_grupo=%s', user_id, targetId, newGroup)
+  writeLog(config.logs_path, logMsg)
+  sendWebhook(logMsg)
+  
+  if isDonor(user_id) then
+    local ownerLog = os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [DONO: GRUPO SET] admin=%d alterou jogador=%d novo_grupo=%s', user_id, targetId, newGroup)
+    writeLog(config.logs_owner_path, ownerLog)
+  end
+  
+  cb({ success = true, message = 'Grupo alterado com sucesso para: ' .. newGroup })
+end)
+
 RegisterNUICallback('getOwnerLogs', function(data, cb)
   local source = source
-  local user_id = vRP.getUserId({source})
+  local user_id = getUserId(src)
   if not user_id or not isDonor(user_id) then
     cb({ success = false, error = 'Somente dono.' })
     return
@@ -678,6 +792,130 @@ RegisterNUICallback('getOwnerLogs', function(data, cb)
   if f then content = f:read('*a') or 'Nenhum log encontrado.'; f:close() end
 
   cb({ success = true, logs = content })
+end)
+
+-- ═══════════════════════════════════════════════════════════════════
+-- SISTEMA DE CHAT E AVISOS PARA ADMINS
+-- ═══════════════════════════════════════════════════════════════════
+
+RegisterNUICallback('getAdminChat', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  
+  if not user_id or not isAdmin(user_id) then
+    cb({ success = false, error = 'Apenas admins podem acessar.' })
+    return
+  end
+  
+  sqlQuery('SELECT admin_id, mensagem, tipo, enviado_em FROM vrp_admin_panel_admin_chat ORDER BY enviado_em DESC LIMIT 50', {}, function(result)
+    local messages = {}
+    if result and #result > 0 then
+      for i = #result, 1, -1 do
+        table.insert(messages, {
+          admin_id = result[i].admin_id,
+          mensagem = result[i].mensagem,
+          tipo = result[i].tipo,
+          enviado_em = result[i].enviado_em
+        })
+      end
+    end
+    cb({ success = true, messages = messages })
+  end)
+end)
+
+RegisterNUICallback('sendAdminMessage', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  
+  if not user_id or not isAdmin(user_id) then
+    cb({ success = false, error = 'Sem permissão.' })
+    return
+  end
+  
+  local mensagem = tostring(data.message or ''):sub(1, 500)
+  if mensagem == '' then
+    cb({ success = false, error = 'Mensagem vazia.' })
+    return
+  end
+  
+  -- Salva no banco
+  sqlExec('INSERT INTO vrp_admin_panel_admin_chat (admin_id, mensagem, tipo) VALUES (?, ?, ?)',
+    {user_id, mensagem, data.type or 'normal'})
+  
+  -- Log da mensagem
+  writeLog(config.logs_path, os.date('%Y-%m-%d %H:%M:%S') .. string.format(' [ADMIN CHAT] admin=%d mensagem=%s', user_id, mensagem))
+  
+  -- Notifica todos os admins online
+  for adminId, adminData in pairs(activeAdmins) do
+    TriggerClientEvent('vrp_admin_panel:newAdminMessage', adminData.source, {
+      admin_id = user_id,
+      mensagem = mensagem,
+      tipo = data.type or 'normal',
+      enviado_em = os.date('%H:%M:%S')
+    })
+  end
+  
+  cb({ success = true })
+end)
+
+RegisterNUICallback('getAnnouncements', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  
+  if not user_id or not isAdmin(user_id) then
+    cb({ success = false, error = 'Sem permissão.' })
+    return
+  end
+  
+  sqlQuery('SELECT titulo, mensagem, tipo, criado_em FROM vrp_admin_panel_system_announcements WHERE ativo = 1 ORDER BY criado_em DESC LIMIT 20', {}, function(result)
+    local announcements = {}
+    if result and #result > 0 then
+      for _, row in ipairs(result) do
+        table.insert(announcements, {
+          titulo = row.titulo,
+          mensagem = row.mensagem,
+          tipo = row.tipo,
+          criado_em = row.criado_em
+        })
+      end
+    end
+    cb({ success = true, announcements = announcements })
+  end)
+end)
+
+RegisterNUICallback('createAnnouncement', function(data, cb)
+  local src = source
+  local user_id = getUserId(src)
+  
+  if not user_id or not isDonor(user_id) then
+    cb({ success = false, error = 'Apenas dono pode criar avisos.' })
+    return
+  end
+  
+  local titulo = tostring(data.titulo or ''):sub(1, 255)
+  local mensagem = tostring(data.mensaje or ''):sub(1, 1000)
+  local tipo = tostring(data.tipo or 'info')
+  
+  if titulo == '' or mensagem == '' then
+    cb({ success = false, error = 'Título ou mensagem vazios.' })
+    return
+  end
+  
+  sqlExec('INSERT INTO vrp_admin_panel_system_announcements (titulo, mensagem, tipo, criado_por) VALUES (?, ?, ?, ?)',
+    {titulo, mensagem, tipo, user_id})
+  
+  -- Notifica todos os admins
+  for adminId, adminData in pairs(activeAdmins) do
+    TriggerClientEvent('vrp_admin_panel:newAnnouncement', adminData.source, {
+      titulo = titulo,
+      mensagem = mensagem,
+      tipo = tipo
+    })
+  end
+  
+  Logger.admin(string.format('[AVISO] dono=%d criou aviso: %s', user_id, titulo))
+  
+  cb({ success = true })
 end)
 
 AddEventHandler('playerDropped', function(reason)

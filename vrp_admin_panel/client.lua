@@ -47,6 +47,16 @@ AddEventHandler('vrp_admin_panel:commandResult', function(success, message)
   SendNUIMessage({ action = 'commandResult', success = success, message = message })
 end)
 
+RegisterNetEvent('vrp_admin_panel:newAdminMessage')
+AddEventHandler('vrp_admin_panel:newAdminMessage', function(data)
+  SendNUIMessage({ action = 'newAdminMessage', data = data })
+end)
+
+RegisterNetEvent('vrp_admin_panel:newAnnouncement')
+AddEventHandler('vrp_admin_panel:newAnnouncement', function(data)
+  SendNUIMessage({ action = 'newAnnouncement', data = data })
+end)
+
 local drawPlayerTags = false
 local playerLastSet = {}
 

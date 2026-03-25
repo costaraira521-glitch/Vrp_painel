@@ -35,6 +35,8 @@
         <button class="tab" data-tab="tab-owner">Logs Dono</button>
         <button class="tab" data-tab="tab-whitelist">Whitelist</button>
         <button class="tab" data-tab="tab-admins">Gestão Admin</button>
+        <button class="tab" data-tab="tab-groups">Grupos</button>
+        <button class="tab" data-tab="tab-announcements">🔔 Avisos</button>
       </div>
 
       <div class="tab-content" id="tab-home">
@@ -101,7 +103,74 @@
         <button id="admin-save-btn">Salvar admin</button>
         <p id="admin-message"></p>
       </div>
+
+      <div class="tab-content" id="tab-groups" style="display:none">
+        <h2>Gerenciar Grupos</h2>
+        <div class="group-container">
+          <div class="group-search">
+            <label>ID do Jogador:</label>
+            <input id="group-player-id" type="number" placeholder="Digite o ID do jogador" />
+            <button id="group-search-btn">Buscar Grupo</button>
+          </div>
+          
+          <div class="group-info" id="group-info" style="display:none;">
+            <div class="info-box">
+              <p><strong>Jogador ID:</strong> <span id="group-player-display">-</span></p>
+              <p><strong>Grupo Atual:</strong> <span id="group-current">-</span></p>
+            </div>
+          </div>
+
+          <div class="group-selector" id="group-selector" style="display:none;">
+            <label>Novo Grupo:</label>
+            <select id="group-select">
+              <option value="">-- Selecione um grupo --</option>
+            </select>
+            <button id="group-set-btn">Definir Grupo</button>
+          </div>
+
+          <p id="group-message"></p>
+        </div>
+      </div>
+
+      <div class="tab-content" id="tab-announcements" style="display:none">
+        <h2>🔔 Sistema de Avisos</h2>
+        <div class="announcements-section">
+          <button id="announcements-refresh-btn" class="btn-primary">Carregar Avisos</button>
+          <div id="announcements-list" class="announcements-list">
+            <p>Nenhum aviso no momento...</p>
+          </div>
+
+          <div id="create-announcement-box" style="display:none; margin-top:1rem;">
+            <h3>📢 Criar Novo Aviso (Apenas Dono)</h3>
+            <input id="announcement-title" type="text" placeholder="Título do aviso" maxlength="255" />
+            <textarea id="announcement-message" placeholder="Mensagem..." maxlength="1000" rows="4"></textarea>
+            <select id="announcement-type">
+              <option value="info">ℹ️ Informação</option>
+              <option value="warning">⚠️ Aviso</option>
+              <option value="critical">🚨 Crítico</option>
+              <option value="success">✅ Sucesso</option>
+            </select>
+            <button id="announcement-send-btn">Enviar Aviso</button>
+            <p id="announcement-message-response"></p>
+          </div>
+        </div>
+      </div>
     </section>
+  </div>
+
+  <!-- CHAT FLUTUANTE PARA ADMINS (Na parte de baixo do painel) -->
+  <div class="admin-chat-container" id="admin-chat-container" style="display:none;">
+    <div class="chat-header">
+      <span>💬 Chat Admins</span>
+      <button id="chat-minimize-btn">−</button>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="system-message">Chat carregando...</div>
+    </div>
+    <div class="chat-input-area">
+      <input id="chat-input" type="text" placeholder="Escreva uma mensagem..." maxlength="500" />
+      <button id="chat-send-btn">Enviar</button>
+    </div>
   </div>
 
   <div class="wl-flow" id="wlPanel" style="display:none">

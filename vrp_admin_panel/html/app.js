@@ -75,6 +75,14 @@ function closePanel() {
 
 const resourceName = 'vrp_admin_panel';
 
+// ✅ SEGURANÇA: Sanitizar HTML para prevenir XSS
+function sanitizeHTML(str) {
+  if (!str || typeof str !== 'string') return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 function fetchNui(action, payload = {}) {
   return new Promise(resolve => {
     fetch(`https://${resourceName}/${action}`, {
@@ -277,3 +285,289 @@ document.getElementById('owner-log-refresh-btn').addEventListener('click', async
   const res = await fetchNui('getOwnerLogs', {});
   document.getElementById('owner-logs-content').textContent = res.success ? res.logs : res.error;
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// SISTEMA DE GRUPOS
+// ═══════════════════════════════════════════════════════════════════
+
+async function loadAvailableGroups() {
+  const res = await fetchNui('getAvailableGroups', {});
+  if (!res.success) {
+    console.error('Erro ao carregar grupos:', res.error);
+    return [];
+  }
+  return res.groups || [];
+}
+
+async function populateGroupSelect() {
+  const groups = await loadAvailableGroups();
+  const select = document.getElementById('group-select');
+  
+  // Limpa opções, mantém a primeira
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+  
+  // Adiciona grupos
+  groups.forEach(group => {
+    const option = document.createElement('option');
+    option.value = group;
+    option.textContent = group.charAt(0).toUpperCase() + group.slice(1);
+    select.appendChild(option);
+  });
+}
+
+document.getElementById('group-search-btn').addEventListener('click', async () => {
+  const playerId = parseInt(document.getElementById('group-player-id').value, 10);
+  
+  if (!playerId || playerId <= 0) {
+    showGroupMessage('Digite um ID válido', 'error');
+    return;
+  }
+  
+  // Busca o grupo do jogador
+  const res = await fetchNui('getPlayerGroup', { targetId: playerId });
+  
+  if (!res.success) {
+    showGroupMessage(res.error || 'Erro ao buscar grupo', 'error');
+    document.getElementById('group-info').style.display = 'none';
+    document.getElementById('group-selector').style.display = 'none';
+    return;
+  }
+  
+  // Mostra informações
+  document.getElementById('group-player-display').textContent = playerId;
+  document.getElementById('group-current').textContent = res.group || 'desconhecido';
+  document.getElementById('group-info').style.display = 'block';
+  
+  // Carrega seletor de grupos
+  await populateGroupSelect();
+  document.getElementById('group-selector').style.display = 'flex';
+  
+  showGroupMessage('Jogador encontrado. Selecione um novo grupo.', 'success');
+});
+
+document.getElementById('group-set-btn').addEventListener('click', async () => {
+  const playerId = parseInt(document.getElementById('group-player-id').value, 10);
+  const newGroup = document.getElementById('group-select').value;
+  
+  if (!playerId || playerId <= 0) {
+    showGroupMessage('ID inválido', 'error');
+    return;
+  }
+  
+  if (!newGroup) {
+    showGroupMessage('Selecione um grupo', 'error');
+    return;
+  }
+  
+  // Envia para o servidor
+  const res = await fetchNui('setPlayerGroup', { targetId: playerId, group: newGroup });
+  
+  if (!res.success) {
+    showGroupMessage(res.error || 'Erro ao definir grupo', 'error');
+    return;
+  }
+  
+  // Sucesso
+  document.getElementById('group-current').textContent = newGroup;
+  showGroupMessage('✓ ' + (res.message || 'Grupo alterado com sucesso!'), 'success');
+});
+
+function showGroupMessage(text, type = 'info') {
+  const msgEl = document.getElementById('group-message');
+  msgEl.textContent = text;
+  msgEl.className = type;
+  
+  setTimeout(() => {
+    msgEl.textContent = '';
+    msgEl.className = '';
+  }, 5000);
+}
+
+// Carrega grupos quando a aba é aberta
+const origSetTab = window.setTab;
+window.setTab = function(tabName) {
+  origSetTab(tabName);
+  if (tabName === 'tab-groups') {
+    populateGroupSelect();
+  }
+  if (tabName === 'tab-announcements') {
+    loadAnnouncements();
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// SISTEMA DE AVISOS
+// ═══════════════════════════════════════════════════════════════════
+
+async function loadAnnouncements() {
+  const res = await fetchNui('getAnnouncements', {});
+  const list = document.getElementById('announcements-list');
+  
+  if (!res.success || !res.announcements || res.announcements.length === 0) {
+    list.innerHTML = '<p>Nenhum aviso no momento...</p>';
+    return;
+  }
+  
+  list.innerHTML = '';
+  res.announcements.forEach(ann => {
+    const item = document.createElement('div');
+    item.className = `announcement-item ${ann.tipo}`;
+    
+    const iconMap = {
+      'info': 'ℹ️',
+      'warning': '⚠️',
+      'critical': '🚨',
+      'success': '✅'
+    };
+    
+    // ✅ SEGURANÇA: Sanitizar título e mensagem do servidor
+    item.innerHTML = `
+      <h4>${iconMap[ann.tipo] || '•'} ${sanitizeHTML(ann.titulo)}</h4>
+      <p>${sanitizeHTML(ann.mensagem)}</p>
+      <div class="time">${new Date(ann.criado_em).toLocaleString()}</div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+document.getElementById('announcements-refresh-btn').addEventListener('click', loadAnnouncements);
+
+document.getElementById('announcement-send-btn').addEventListener('click', async () => {
+  const titulo = document.getElementById('announcement-title').value.trim();
+  const mensaje = document.getElementById('announcement-message').value.trim();
+  const tipo = document.getElementById('announcement-type').value;
+  
+  if (!titulo || !mensaje) {
+    showAnnouncementMessage('Preencha título e mensagem', 'error');
+    return;
+  }
+  
+  const res = await fetchNui('createAnnouncement', { titulo, mensaje, tipo });
+  
+  if (!res.success) {
+    showAnnouncementMessage(res.error || 'Erro ao criar aviso', 'error');
+    return;
+  }
+  
+  showAnnouncementMessage('✓ Aviso criado com sucesso!', 'success');
+  document.getElementById('announcement-title').value = '';
+  document.getElementById('announcement-message').value = '';
+  
+  setTimeout(loadAnnouncements, 500);
+});
+
+function showAnnouncementMessage(text, type = 'info') {
+  const msgEl = document.getElementById('announcement-message-response');
+  msgEl.textContent = text;
+  msgEl.className = type;
+  msgEl.style.display = 'block';
+  
+  setTimeout(() => {
+    msgEl.textContent = '';
+    msgEl.className = '';
+  }, 4000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SISTEMA DE CHAT PARA ADMINS
+// ═══════════════════════════════════════════════════════════════════
+
+let chatVisible = false;
+let chatMinimized = false;
+
+function initAdminChat() {
+  const chatContainer = document.getElementById('admin-chat-container');
+  if (!chatContainer) return;
+  
+  chatContainer.style.display = 'block';
+  chatVisible = true;
+  loadAdminChat();
+}
+
+document.getElementById('chat-minimize-btn').addEventListener('click', () => {
+  const container = document.getElementById('admin-chat-container');
+  chatMinimized = !chatMinimized;
+  container.classList.toggle('minimized');
+  document.getElementById('chat-minimize-btn').textContent = chatMinimized ? '□' : '−';
+});
+
+async function loadAdminChat() {
+  const res = await fetchNui('getAdminChat', {});
+  const messagesDiv = document.getElementById('chat-messages');
+  
+  if (!res.success || !res.messages || res.messages.length === 0) {
+    messagesDiv.innerHTML = '<div class="system-message">Nenhuma mensagem ainda</div>';
+    return;
+  }
+  
+  messagesDiv.innerHTML = '';
+  res.messages.forEach(msg => {
+    addChatMessageToUI(msg.admin_id, msg.mensagem, msg.tipo, msg.enviado_em);
+  });
+  
+  // Scroll para baixo
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function addChatMessageToUI(adminId, message, type = 'normal', time = null) {
+  const messagesDiv = document.getElementById('chat-messages');
+  const msgEl = document.createElement('div');
+  
+  const isOwn = false; // Você teria que rastrear isso
+  msgEl.className = `chat-message ${type === 'aviso' ? 'system' : 'received'}`;
+  
+  const timestamp = time ? new Date(time).toLocaleTimeString() : new Date().toLocaleTimeString();
+  // ✅ SEGURANÇA: Sanitizar mensagem do servidor
+  msgEl.innerHTML = `${sanitizeHTML(message)}<span class="timestamp">${timestamp}</span>`;
+  
+  messagesDiv.appendChild(msgEl);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+document.getElementById('chat-send-btn').addEventListener('click', async () => {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  const res = await fetchNui('sendAdminMessage', { message, type: 'normal' });
+  
+  if (!res.success) {
+    console.error('Erro ao enviar mensagem:', res.error);
+    return;
+  }
+  
+  addChatMessageToUI(0, message);
+  input.value = '';
+});
+
+document.getElementById('chat-input').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById('chat-send-btn').click();
+  }
+});
+
+// Novos eventos de mensagens
+window.addEventListener('message', (event) => {
+  const data = event.data;
+  if (data.action === 'newAdminMessage') {
+    if (!chatVisible) initAdminChat();
+    addChatMessageToUI(data.data.admin_id, data.data.mensagem, data.data.tipo, data.data.enviado_em);
+  }
+  if (data.action === 'newAnnouncement') {
+    // Exibe notificação visual
+    console.log('Novo aviso:', data.data);
+    // Poderia animar ou mostrar toast notification
+  }
+});
+
+// Mostrar chat quando fizer login
+const origLoginBtn = document.getElementById('login-btn');
+if (origLoginBtn) {
+  origLoginBtn.addEventListener('click', () => {
+    setTimeout(initAdminChat, 500);
+  });
+}
